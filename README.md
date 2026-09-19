@@ -140,8 +140,9 @@ pollId + voterId
 
 This provides an additional database-level protection against duplicate votes.
 
-API Overview
-Public Endpoints
+## API Overview
+
+### Public Endpoints
 GET  /api/health
 POST /api/signup
 POST /api/login
