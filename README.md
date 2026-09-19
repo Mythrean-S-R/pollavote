@@ -156,8 +156,9 @@ GET  /api/my-polls
 Protected endpoints require:
 
 Authorization: Bearer <JWT>
-Project Structure
-pollavote/
+## Project Structure
+
+```pollavote/
 │
 ├── backend/
 │   ├── config/
@@ -204,7 +205,9 @@ pollavote/
 │
 ├── README.md
 └── .gitignore
-Running Locally
+```
+## Running Locally
+
 Prerequisites
 
 Install:
