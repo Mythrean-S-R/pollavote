@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { Button, Icon, Logo } from "../components/pollavote/primitives";
 import { apiRequest } from "../services/api";
 
 function getVoterId() {
@@ -13,12 +14,60 @@ function getVoterId() {
     return voterId;
 }
 
+function LiveIndicator({ connected }) {
+    return (
+        <span
+            className={`pv-live ${connected ? "pv-live--live" : "pv-live--connecting"
+                }`}
+            role="status"
+        >
+            <span className="pv-live__dot" aria-hidden="true" />
+            <span className="pv-sr-only">Live updates: </span>
+            <span>{connected ? "Live" : "Connecting"}</span>
+        </span>
+    );
+}
+
+function ResultRow({ option, total }) {
+    const percentage =
+        total === 0 ? 0 : (option.votes / total) * 100;
+
+    return (
+        <li className="pv-result">
+            <div className="pv-result__row">
+                <span className="pv-result__label">
+                    {option.text}
+                </span>
+
+                <span className="pv-result__figures">
+                    <span className="pv-num">
+                        {Math.round(percentage)}%
+                    </span>
+
+                    <span className="pv-result__count">
+                        {option.votes}{" "}
+                        {option.votes === 1 ? "vote" : "votes"}
+                    </span>
+                </span>
+            </div>
+
+            <div className="pv-track" aria-hidden="true">
+                <div
+                    className="pv-fill"
+                    style={{ width: `${percentage}%` }}
+                />
+            </div>
+        </li>
+    );
+}
+
 function Poll() {
     const { id } = useParams();
 
     const [poll, setPoll] = useState(null);
     const [selectedOption, setSelectedOption] = useState("");
     const [message, setMessage] = useState("");
+    const [copyMessage, setCopyMessage] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(true);
     const [voting, setVoting] = useState(false);
@@ -41,7 +90,8 @@ function Poll() {
 
     useEffect(() => {
         const wsBaseUrl =
-            import.meta.env.VITE_WS_BASE_URL || "ws://localhost:8080";
+            import.meta.env.VITE_WS_BASE_URL ||
+            "ws://localhost:8080";
 
         const socket = new WebSocket(
             `${wsBaseUrl}/api/polls/${id}/ws`
@@ -60,7 +110,10 @@ function Poll() {
                     setPoll(data.poll);
                 }
             } catch (err) {
-                console.error("Failed to parse WebSocket message:", err);
+                console.error(
+                    "Failed to parse WebSocket message:",
+                    err
+                );
             }
         };
 
@@ -89,6 +142,7 @@ function Poll() {
         }
 
         setMessage("");
+        setCopyMessage("");
         setError("");
         setVoting(true);
 
@@ -111,7 +165,7 @@ function Poll() {
         }
     }
 
-    function getTotalVotes() {
+    const totalVotes = useMemo(() => {
         if (!poll) {
             return 0;
         }
@@ -120,274 +174,312 @@ function Poll() {
             (total, option) => total + option.votes,
             0
         );
-    }
+    }, [poll]);
 
-    function getPercentage(votes) {
-        const totalVotes = getTotalVotes();
+    const shareUrl = `${window.location.origin}/poll/${id}`;
 
-        if (totalVotes === 0) {
-            return 0;
+    async function handleCopyLink() {
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            setCopyMessage("Poll link copied to clipboard.");
+            setError("");
+        } catch {
+            setCopyMessage("Unable to copy the poll link.");
         }
-
-        return Math.round((votes / totalVotes) * 100);
     }
 
     if (loading) {
         return (
-            <main className="page">
-                <div className="container" style={{ maxWidth: "700px" }}>
-                    <div className="card">
-                        <p className="muted">Loading poll...</p>
-                    </div>
-                </div>
-            </main>
+            <div className="pv-root pv-pub">
+                <header className="pv-pubbar">
+                    <Logo size="sm" href="/" />
+                </header>
+
+                <main className="pv-pub__main">
+                    <article className="pv-poll">
+                        <div className="pv-empty pv-empty--slim">
+                            <p style={{ margin: 0 }}>
+                                Loading poll...
+                            </p>
+                        </div>
+                    </article>
+                </main>
+            </div>
         );
     }
 
     if (error && !poll) {
         return (
-            <main className="page">
-                <div className="container" style={{ maxWidth: "700px" }}>
-                    <div className="card">
-                        <h1 className="page-title">Poll unavailable</h1>
-                        <div className="error-message">{error}</div>
-                    </div>
-                </div>
-            </main>
+            <div className="pv-root pv-pub">
+                <header className="pv-pubbar">
+                    <Logo size="sm" href="/" />
+                </header>
+
+                <main className="pv-pub__main">
+                    <article className="pv-poll">
+                        <div className="pv-poll__meta">
+                            <span className="pv-poll__by">
+                                Public poll
+                            </span>
+                        </div>
+
+                        <h1 className="pv-poll__q">
+                            Poll unavailable
+                        </h1>
+
+                        <div
+                            className="pv-field__error"
+                            role="alert"
+                        >
+                            <Icon name="alert" size={16} />
+                            <span>{error}</span>
+                        </div>
+                    </article>
+                </main>
+            </div>
         );
     }
 
     return (
-        <main className="page">
-            <div className="container" style={{ maxWidth: "700px" }}>
-                <div
-                    style={{
-                        textAlign: "center",
-                        marginBottom: "28px",
-                    }}
+        <div className="pv-root pv-pub pv-pub--dots">
+            <a className="pv-skip" href="#pv-poll-main">
+                Skip to poll
+            </a>
+
+            <header className="pv-pubbar">
+                <Logo size="sm" href="/" />
+
+                <Button
+                    as="a"
+                    href="/signup"
+                    variant="ghost"
+                    size="sm"
                 >
-                    <p
-                        style={{
-                            margin: "0 0 6px",
-                            color: "#4f46e5",
-                            fontSize: "14px",
-                            fontWeight: "700",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.06em",
-                        }}
-                    >
-                        Pollavote
-                    </p>
+                    Make your own poll
+                </Button>
+            </header>
 
-                    <h1 className="page-title">Live Poll</h1>
+            <main
+                id="pv-poll-main"
+                className="pv-pub__main"
+            >
+                <article
+                    className="pv-poll"
+                    aria-labelledby="poll-question"
+                >
+                    <div className="pv-poll__meta">
+                        <span className="pv-poll__by">
+                            Public poll
+                        </span>
 
-                    <div
-                        style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "7px",
-                            padding: "6px 10px",
-                            borderRadius: "999px",
-                            background: connected ? "#ecfdf3" : "#f2f4f7",
-                            color: connected ? "#027a48" : "#667085",
-                            fontSize: "13px",
-                            fontWeight: "600",
-                        }}
-                    >
-                        <span
-                            style={{
-                                width: "7px",
-                                height: "7px",
-                                borderRadius: "50%",
-                                background: connected ? "#12b76a" : "#98a2b3",
-                            }}
-                        />
-
-                        {connected ? "Live updates connected" : "Connecting to live updates..."}
+                        <LiveIndicator connected={connected} />
                     </div>
-                </div>
 
-                <div className="card">
-                    <h2
-                        style={{
-                            margin: "0 0 24px",
-                            fontSize: "26px",
-                            lineHeight: "1.3",
-                            color: "#172033",
-                        }}
+                    <h1
+                        className="pv-poll__q"
+                        id="poll-question"
                     >
                         {poll.question}
-                    </h2>
+                    </h1>
 
-                    <form onSubmit={handleVote}>
-                        <div
-                            style={{
-                                display: "grid",
-                                gap: "10px",
-                                marginBottom: "20px",
-                            }}
+                    <form onSubmit={handleVote} noValidate>
+                        <fieldset
+                            className="pv-options"
+                            aria-label="Poll options"
                         >
                             {poll.options.map((option) => {
-                                const isSelected = selectedOption === option.id;
+                                const isSelected =
+                                    selectedOption === option.id;
 
                                 return (
                                     <label
+                                        className="pv-option"
                                         key={option.id}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "12px",
-                                            padding: "14px 16px",
-                                            border: isSelected
-                                                ? "2px solid #4f46e5"
-                                                : "1px solid #d0d5dd",
-                                            borderRadius: "10px",
-                                            background: isSelected ? "#eef2ff" : "#ffffff",
-                                            cursor: "pointer",
-                                            transition: "border-color 0.15s, background 0.15s",
-                                        }}
                                     >
                                         <input
                                             type="radio"
                                             name="poll-option"
                                             value={option.id}
                                             checked={isSelected}
-                                            onChange={() => setSelectedOption(option.id)}
+                                            onChange={() => {
+                                                setSelectedOption(option.id);
+                                                setError("");
+                                            }}
                                         />
 
                                         <span
-                                            style={{
-                                                flex: 1,
-                                                color: "#344054",
-                                                fontWeight: "500",
-                                            }}
+                                            className="pv-option__mark"
+                                            aria-hidden="true"
                                         >
+                                            <Icon
+                                                name="check"
+                                                size={15}
+                                                strokeWidth={3.5}
+                                            />
+                                        </span>
+
+                                        <span className="pv-option__text">
                                             {option.text}
                                         </span>
                                     </label>
                                 );
                             })}
+                        </fieldset>
+
+                        <div className="pv-poll__actions">
+                            {error && (
+                                <p
+                                    className="pv-field__error"
+                                    role="alert"
+                                >
+                                    <Icon name="alert" size={16} />
+                                    <span>{error}</span>
+                                </p>
+                            )}
+
+                            {message && (
+                                <div
+                                    className="pv-confirm pv-confirm--new"
+                                    role="status"
+                                >
+                                    <span
+                                        className="pv-confirm__badge"
+                                        aria-hidden="true"
+                                    >
+                                        <Icon
+                                            name="check"
+                                            size={20}
+                                            strokeWidth={3.2}
+                                        />
+                                    </span>
+
+                                    <div>
+                                        <h2 className="pv-confirm__title">
+                                            Vote recorded
+                                        </h2>
+
+                                        <p>{message}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            <Button
+                                type="submit"
+                                size="lg"
+                                block
+                                loading={voting}
+                            >
+                                {voting
+                                    ? "Submitting vote..."
+                                    : "Vote"}
+                            </Button>
+                        </div>
+                    </form>
+                </article>
+
+                <section
+                    className="pv-poll"
+                    aria-labelledby="results-title"
+                >
+                    <div className="pv-results__head">
+                        <div>
+                            <h2
+                                id="results-title"
+                                className="pv-poll__q"
+                                style={{ fontSize: "1.5rem" }}
+                            >
+                                Live results
+                            </h2>
+
+                            <p className="pv-muted">
+                                Results update automatically as votes arrive.
+                            </p>
                         </div>
 
-                        {error && <div className="error-message">{error}</div>}
-
-                        {message && <div className="success-message">{message}</div>}
-
-                        <button
-                            type="submit"
-                            className="primary-button"
-                            disabled={voting}
-                            style={{
-                                width: "100%",
-                                opacity: voting ? 0.7 : 1,
-                            }}
-                        >
-                            {voting ? "Submitting vote..." : "Submit vote"}
-                        </button>
-                    </form>
-                </div>
-
-                <div style={{ marginTop: "24px" }}>
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "baseline",
-                            marginBottom: "14px",
-                        }}
-                    >
-                        <h2
-                            style={{
-                                margin: 0,
-                                fontSize: "21px",
-                                color: "#172033",
-                            }}
-                        >
-                            Live results
-                        </h2>
-
-                        <span className="muted" style={{ fontSize: "14px" }}>
-                            {getTotalVotes()}{" "}
-                            {getTotalVotes() === 1 ? "vote" : "votes"}
+                        <span className="pv-num">
+                            {totalVotes}
                         </span>
                     </div>
 
-                    <div
-                        className="card"
-                        style={{
-                            display: "grid",
-                            gap: "16px",
-                        }}
+                    <ul
+                        className="pv-results"
+                        aria-label="Live poll results"
                     >
-                        {poll.options.map((option) => {
-                            const percentage = getPercentage(option.votes);
+                        {poll.options.map((option) => (
+                            <ResultRow
+                                key={option.id}
+                                option={option}
+                                total={totalVotes}
+                            />
+                        ))}
+                    </ul>
 
-                            return (
-                                <div key={option.id}>
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            gap: "12px",
-                                            marginBottom: "7px",
-                                        }}
-                                    >
-                                        <span
-                                            style={{
-                                                color: "#344054",
-                                                fontWeight: "600",
-                                            }}
-                                        >
-                                            {option.text}
-                                        </span>
+                    <div className="pv-results__foot">
+                        <p className="pv-results__total">
+                            {totalVotes}
+                            <span>
+                                {totalVotes === 1
+                                    ? "vote"
+                                    : "votes"}{" "}
+                                in total
+                            </span>
+                        </p>
 
-                                        <span
-                                            style={{
-                                                color: "#667085",
-                                                fontSize: "14px",
-                                                fontWeight: "600",
-                                            }}
-                                        >
-                                            {percentage}% · {option.votes}
-                                        </span>
-                                    </div>
-
-                                    <div
-                                        style={{
-                                            height: "9px",
-                                            overflow: "hidden",
-                                            borderRadius: "999px",
-                                            background: "#eaecf0",
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                width: `${percentage}%`,
-                                                height: "100%",
-                                                borderRadius: "999px",
-                                                background: "#4f46e5",
-                                                transition: "width 0.35s ease",
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                            );
-                        })}
+                        <p className="pv-results__note">
+                            {connected
+                                ? "Live updates enabled"
+                                : "Live updates reconnecting..."}
+                        </p>
                     </div>
-                </div>
+                </section>
 
-                <p
-                    className="muted"
-                    style={{
-                        textAlign: "center",
-                        marginTop: "22px",
-                        fontSize: "13px",
-                    }}
+                <section
+                    className="pv-share"
+                    aria-labelledby="share-title"
                 >
-                    Results update automatically when new votes are submitted.
-                </p>
-            </div>
-        </main>
+                    <h2
+                        className="pv-share__title"
+                        id="share-title"
+                    >
+                        <Icon name="share" size={18} />
+                        Share this poll
+                    </h2>
+
+                    <div className="pv-share__row">
+                        <input
+                            className="pv-share__url"
+                            readOnly
+                            value={shareUrl}
+                            aria-label="Poll link"
+                            onFocus={(event) =>
+                                event.target.select()
+                            }
+                        />
+
+                        <Button
+                            variant="secondary"
+                            icon="copy"
+                            onClick={handleCopyLink}
+                        >
+                            Copy link
+                        </Button>
+                    </div>
+
+                    {copyMessage && (
+                        <p
+                            className="pv-results__note"
+                            role="status"
+                        >
+                            {copyMessage}
+                        </p>
+                    )}
+                </section>
+            </main>
+
+            <footer className="pv-pub__foot">
+                Polls made with pollavote
+            </footer>
+        </div>
     );
 }
 
