@@ -130,7 +130,7 @@ const STRENGTH_LABEL = ["", "Weak", "Okay", "Good", "Strong"];
  *  loading, error
  *  loginHref / onLoginClick
  */
-export function SignupPage({ onSubmit, loading = false, error, loginHref = "/login", onLoginClick }) {
+export function SignupPage({ onSubmit, loading = false, error, message, loginHref = "/login", onLoginClick }) {
   const [errors, setErrors] = useState({});
   const [pw, setPw] = useState("");
   const level = scorePassword(pw);
@@ -146,7 +146,7 @@ export function SignupPage({ onSubmit, loading = false, error, loginHref = "/log
     if (!name) next.name = "Enter your name.";
     if (!email) next.email = "Enter your email address.";
     else if (!EMAIL_RE.test(email)) next.email = "Enter a valid email, like you@example.com.";
-    if (password.length < 8) next.password = "Use at least 8 characters.";
+    if (password.length < 6) next.password = "Use at least 8 characters.";
     setErrors(next);
     const firstInvalid = Object.keys(next)[0];
     if (firstInvalid) {
@@ -168,6 +168,13 @@ export function SignupPage({ onSubmit, loading = false, error, loginHref = "/log
         </div>
       )}
 
+      {message && (
+        <div className="pv-alert pv-alert--success" role="status">
+          <Icon name="check" size={18} />
+          <span>{message}</span>
+        </div>
+      )}
+
       <form className="pv-form" noValidate onSubmit={handleSubmit}>
         <Field label="Name" name="name" autoComplete="name" placeholder="Priya Nair" error={errors.name} />
         <Field label="Email" name="email" type="email" autoComplete="email" inputMode="email" placeholder="you@example.com" error={errors.email} />
@@ -177,7 +184,7 @@ export function SignupPage({ onSubmit, loading = false, error, loginHref = "/log
             name="password"
             type="password"
             autoComplete="new-password"
-            placeholder="At least 8 characters"
+            placeholder="At least 6 characters"
             error={errors.password}
             onChange={(e) => setPw(e.target.value)}
           />
