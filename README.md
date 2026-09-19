@@ -90,9 +90,7 @@ Poll creators can create polls and share them with an audience. Participants can
 
 ```
 
-```text
-
-How Real-Time Updates Work
+## How Real-Time Updates Work
 
 Pollavote uses WebSockets together with Redis Pub/Sub.
 
