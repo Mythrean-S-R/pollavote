@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# Environment files / secrets
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+
+# Frontend production builds
+frontend/dist/
+
+# Logs
+*.log
+
+# Editor files
+.vscode/
+.idea/
